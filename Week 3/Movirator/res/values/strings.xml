@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="app_name">Movirator</string>
+    <string name="hello_world">Hello world!</string>
+    <string name="action_settings">Settings</string>
+    <string name="perform_api_request">Perform API Request</string>
+    <string name="click_to_see_movies">Click to see movies</string>
+    <string name="search">Search</string>
+    <string name="type_a_movie">Movie Title</string>
+    <string name="released_">Released:</string>
+    <string name="title_">Title:</string>
+    <string name="runtime_">Runtime:</string>
+    <string name="rating_">Rating:</string>
+    <string name="title_activity_movie_detail">Movie Details</string>
+
+</resources>

@@ -34,7 +34,7 @@ public class TestProvider extends AndroidTestCase {
 
     public void testDeleteProvider() throws Throwable {
         // Given
-        ContentValues locationValues = getLocationValues();
+        ContentValues locationValues = getLocationValues(); // com.xxx/location
         final Uri locationUri = mContext.getContentResolver().insert(LocationEntry.CONTENT_URI, locationValues);
         mContext.getContentResolver().insert(WeatherEntry.CONTENT_URI, getWeatherValues((ContentUris.parseId(locationUri))));
 

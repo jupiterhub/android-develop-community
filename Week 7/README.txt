@@ -7,5 +7,9 @@ Whats New:
 * Experience on lesson 4b
 * ContentProvider  (Why / CRUD / Before / Bulk)
 * Loaders 
-* Recording Screen / Moto 360
+* Recording Screen / Moto 3600
+
+2nd week update
+* Refactored Detail View
+* Update Detail View to use Loader Pattern
 

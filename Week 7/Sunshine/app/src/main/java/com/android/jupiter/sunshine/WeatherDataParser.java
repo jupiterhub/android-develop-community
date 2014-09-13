@@ -41,35 +41,7 @@ public class WeatherDataParser {
         return format.format(date).toString();
     }
 
-    /**
-     * Prepare the weather high/lows for presentation.
-     */
-    private String formatHighLows(double high, double low) {
-        // Data is fetched in Celsius by default.
-        // If user prefers to see in Fahrenheit, convert the values here.
-        // We do this rather than fetching in Fahrenheit so that the user can
-        // change this option without us having to re-fetch the data once
-        // we start storing the values in a database.
-        SharedPreferences sharedPrefs =
-                PreferenceManager.getDefaultSharedPreferences(mContext);
-        String unitType = sharedPrefs.getString(
-                mContext.getString(R.string.pref_temp_unit_key),
-                mContext.getString(R.string.pref_temp_unit_metric));
 
-        if (unitType.equals(mContext.getString(R.string.pref_temp_unit_imperial))) {
-            high = (high * 1.8) + 32;
-            low = (low * 1.8) + 32;
-        } else if (!unitType.equals(mContext.getString(R.string.pref_temp_unit_metric))) {
-            Log.d(LOG_TAG, "Unit type not found: " + unitType);
-        }
-
-        // For presentation, assume the user doesn't care about tenths of a degree.
-        long roundedHigh = Math.round(high);
-        long roundedLow = Math.round(low);
-
-        String highLowStr = roundedHigh + "/" + roundedLow;
-        return highLowStr;
-    }
 
     /**
      * Take the String representing the complete forecast in JSON Format and
@@ -78,7 +50,7 @@ public class WeatherDataParser {
      * Fortunately parsing is easy:  constructor takes the JSON string and converts it
      * into an Object hierarchy for us.
      */
-    public String[] getWeatherDataFromJson(String forecastJsonStr, int numDays)
+    public void getWeatherDataFromJson(String forecastJsonStr, int numDays)
             throws JSONException {
 
         // These are the names of the JSON objects that need to be extracted.
@@ -173,10 +145,6 @@ public class WeatherDataParser {
             weatherValues.put(WeatherContract.WeatherEntry.COLUMN_WEATHER_ID, weatherId);
 
             cVVector.add(weatherValues);
-
-            String highAndLow = formatHighLows(high, low);
-            String day = getReadableDateString(dateTime);
-            resultStrings[i] = day + " - " + description + " - " + highAndLow;
         }
 
         if (cVVector.size() > 0) {
@@ -185,36 +153,6 @@ public class WeatherDataParser {
             int rowsInserted = mContext.getContentResolver()
                     .bulkInsert(WeatherContract.WeatherEntry.CONTENT_URI, cvArray);
             Log.v(LOG_TAG, "inserted " + rowsInserted + " rows of weather data");
-        }
-        logDebug();
-
-
-        return resultStrings;
-    }
-
-    private void logDebug() {
-        // Use a DEBUG variable to gate whether or not you do this, so you can easily
-        // turn it on and off, and so that it's easy to see what you can rip out if
-        // you ever want to remove it.
-        if (DEBUG) {
-            Cursor weatherCursor = mContext.getContentResolver().query(
-                    WeatherContract.WeatherEntry.CONTENT_URI,
-                    null,
-                    null,
-                    null,
-                    null
-            );
-
-            if (weatherCursor.moveToFirst()) {
-                ContentValues resultValues = new ContentValues();
-                DatabaseUtils.cursorRowToContentValues(weatherCursor, resultValues);
-                Log.v(LOG_TAG, "Query succeeded! **********");
-                for (String key : resultValues.keySet()) {
-                    Log.v(LOG_TAG, key + ": " + resultValues.getAsString(key));
-                }
-            } else {
-                Log.v(LOG_TAG, "Query failed! :( **********");
-            }
         }
     }
 

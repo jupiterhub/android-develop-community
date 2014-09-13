@@ -19,7 +19,7 @@ public class WeatherProvider extends ContentProvider {
     private static final int LOCATION = 300;
     private static final int LOCATION_ID = 301;
 
-    private UriMatcher sUriMatcher = buildUriMatcher();
+    private static UriMatcher sUriMatcher = buildUriMatcher();
     private WeatherDbHelper mOpenHelper;
 
     private static final SQLiteQueryBuilder sWeatherByLocationSettingQueryBuilder;

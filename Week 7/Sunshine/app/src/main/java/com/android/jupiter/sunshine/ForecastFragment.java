@@ -9,7 +9,6 @@ import android.content.Loader;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
-import android.preference.PreferenceManager;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -17,19 +16,22 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
 import android.widget.ListView;
+import android.widget.SimpleCursorAdapter;
+import android.widget.TextView;
 
 import com.android.jupiter.sunshine.data.WeatherContract;
 
-import java.util.ArrayList;
 import java.util.Date;
 
 
 public class ForecastFragment extends Fragment implements LoaderManager.LoaderCallbacks<Cursor> {
-    private static final int FORECAST_LOADER = 0;
     public static final int FORECAST_LOADER = 0;
     private String mLocation;
+
+    // since we use the preference change initially to populate the summary
+    // field, we'll ignore that change at start of the activity
+    private boolean mBindingPreference;
 
     // For the forecast view we're showing only a small subset of the stored data.
     // Specify the columns we need.
@@ -57,7 +59,7 @@ public class ForecastFragment extends Fragment implements LoaderManager.LoaderCa
     public static final int COL_WEATHER_MIN_TEMP = 4;
     public static final int COL_LOCATION_SETTING = 5;
 
-    private ArrayAdapter<String> arrayAdapter;
+    private SimpleCursorAdapter mForecastAdapter;
 
     public ForecastFragment() {
     }
@@ -70,20 +72,61 @@ public class ForecastFragment extends Fragment implements LoaderManager.LoaderCa
         this.setHasOptionsMenu(true);
 
         ListView listView = (ListView) rootView.findViewById(R.id.listview_forecast);
-        arrayAdapter = new ArrayAdapter<String>(getActivity(), R.layout.list_item_forecast, R.id.list_item_forecast_textview, new ArrayList<String>());
+        mForecastAdapter = new SimpleCursorAdapter(getActivity(),
+                R.layout.list_item_forecast,
+                null,
+                // the column names to use to fill the textviews
+                new String[]{WeatherContract.WeatherEntry.COLUMN_DATETEXT,
+                        WeatherContract.WeatherEntry.COLUMN_SHORT_DESC,
+                        WeatherContract.WeatherEntry.COLUMN_MAX_TEMP,
+                        WeatherContract.WeatherEntry.COLUMN_MIN_TEMP
+                },
+                // the textviews to fill with the data pulled from the columns above
+                new int[]{R.id.list_item_date_textview,
+                        R.id.list_item_forecast_textview,
+                        R.id.list_item_high_textview,
+                        R.id.list_item_low_textview
+                },
+                0);
 
-        listView.setAdapter(arrayAdapter);
+        mForecastAdapter.setViewBinder(new SimpleCursorAdapter.ViewBinder() {
+            @Override
+            public boolean setViewValue(View view, Cursor cursor, int columnIndex) {
+                boolean isMetric = Utility.isMetric(getActivity());
+                switch (columnIndex) {
+                    case COL_WEATHER_MAX_TEMP:
+                    case COL_WEATHER_MIN_TEMP: {
+                        // we have to do some formatting and possibly a conversion
+                        ((TextView) view).setText(Utility.formatTemperature(
+                                cursor.getDouble(columnIndex), isMetric));
+                        return true;
+                    }
+                    case COL_WEATHER_DATE: {
+                        String dateString = cursor.getString(columnIndex);
+                        TextView dateView = (TextView) view;
+                        dateView.setText(Utility.formatDate(dateString));
+                        return true;
+                    }
+                }
+                return false;
+            }
+        });
+        listView.setAdapter(mForecastAdapter);
         listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
-            public void onItemClick(AdapterView<?> adapterView, View view, int position, long id) {
-                final Intent intent = new Intent(getActivity(), DetailActivity.class);
-                intent.putExtra(Intent.EXTRA_TEXT, arrayAdapter.getItem(position));
-                getActivity().startActivity(intent);
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                Cursor cursor = mForecastAdapter.getCursor();
+                if (cursor != null && cursor.moveToPosition(position)) {
+                    Intent intent = new Intent(getActivity(), DetailActivity.class)
+                            .putExtra(DetailActivity.DATE_KEY, cursor.getString(COL_WEATHER_DATE));
+                    startActivity(intent);
+                }
             }
         });
 
         return rootView;
     }
+
 
     @SuppressLint("Override")
     @Override
@@ -107,13 +150,12 @@ public class ForecastFragment extends Fragment implements LoaderManager.LoaderCa
 
         final String location = Utility.getPreferredLocation(getActivity());
 
-        new FetchWeatherTask(getActivity(), arrayAdapter).execute(location);
+        new FetchWeatherTask(getActivity()).execute(location);
     }
 
     @Override
     public void onStart() {
         super.onStart();
-        updateWeatherInfo();
     }
 
     @Override
@@ -151,12 +193,20 @@ public class ForecastFragment extends Fragment implements LoaderManager.LoaderCa
     }
 
     @Override
-    public void onLoadFinished(Loader<Cursor> cursorLoader, Cursor cursor) {
-
+    public void onLoadFinished(Loader<Cursor> cursorLoader, Cursor data) {
+        mForecastAdapter.swapCursor(data);
     }
 
     @Override
     public void onLoaderReset(Loader<Cursor> cursorLoader) {
+        mForecastAdapter.swapCursor(null);
+    }
 
+    @Override
+    public void onResume() {
+        super.onResume();
+        if (mLocation != null && !mLocation.equals(Utility.getPreferredLocation(getActivity()))) {
+            getLoaderManager().restartLoader(FORECAST_LOADER, null, this);
+        }
     }
 }

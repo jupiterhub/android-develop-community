@@ -4,7 +4,7 @@ import android.content.Context;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.util.Log;
-import android.widget.ArrayAdapter;
+import android.widget.SimpleCursorAdapter;
 
 import org.json.JSONException;
 
@@ -14,30 +14,26 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.util.Arrays;
 
-public class FetchWeatherTask extends AsyncTask<String, Void, String[]> {
+public class FetchWeatherTask extends AsyncTask<String, Void, Void> {
 
     private final String LOG_TAG = FetchWeatherTask.class.getSimpleName();
 
-    private ArrayAdapter<String> arrayAdapter;
+    private SimpleCursorAdapter simpleCursorAdapter;
     private Context mContext;
 
-    public FetchWeatherTask(Context context, ArrayAdapter<String> arrayAdapter) {
+    @Override
+    protected void onPreExecute() {
+        super.onPreExecute();
+    }
+
+    public FetchWeatherTask(Context context) {
         mContext = context;
-        this.arrayAdapter = arrayAdapter;
+        this.simpleCursorAdapter = simpleCursorAdapter;
     }
 
     @Override
-    protected void onPostExecute(String[] daysForecast) {
-        if (daysForecast != null) {
-            arrayAdapter.clear();
-            arrayAdapter    .addAll(Arrays.asList(daysForecast));
-        }
-    }
-
-    @Override
-    protected String[] doInBackground(String... strings) {
+    protected Void doInBackground(String... strings) {
 
         String forecastJsonString = null;
         HttpURLConnection urlConnection = null;
@@ -51,7 +47,7 @@ public class FetchWeatherTask extends AsyncTask<String, Void, String[]> {
 
             final String json = "JSON";
             final String metric = "metric";
-            final String noOfDays = "7";
+            final String noOfDays = "14";
 
             Uri builder = Uri.parse(FORECAST_BASE_URL).buildUpon()
                     .appendQueryParameter(PARAM_LOCATION, strings[0])
@@ -90,10 +86,11 @@ public class FetchWeatherTask extends AsyncTask<String, Void, String[]> {
             }
 
             forecastJsonString = buffer.toString();
+            // Persist Data
+            new WeatherDataParser(mContext).getWeatherDataFromJson(forecastJsonString, Integer.valueOf(noOfDays));
 
-            final String[] weatherDataFromJson = new WeatherDataParser(mContext).getWeatherDataFromJson(forecastJsonString, Integer.valueOf(noOfDays));
-
-            return weatherDataFromJson;
+            // We return nothing since the cursor loader reads from contentprovider
+            return null;
 
         } catch (IOException ioException) {
             Log.e(LOG_TAG, "Error", ioException);
